@@ -1,12 +1,15 @@
 use std::error::Error;
 use std::{env, process};
 
-use csv::{ReaderBuilder, Trim};
+use csv::{ReaderBuilder, Trim, WriterBuilder};
 use models::{Account, Transaction, TransactionType};
 use processor::process_transactions;
 
 mod models;
 mod processor;
+
+#[macro_use]
+extern crate log;
 
 // From a filepath, read a .csv file for transaction data
 // Deserialize data to Transaction structs
@@ -15,41 +18,42 @@ fn get_csv_transactions_from_filepath(path: &str) -> Result<Vec<Transaction>, Bo
     let mut transactions: Vec<Transaction> = Vec::new();
     for item in reader.deserialize() {
         let transaction: Transaction = item?;
-        println!("{:?}", transaction);
+        debug!("{:?}", transaction);
         transactions.push(transaction);
     }
     Ok(transactions)
 }
 
 fn main() {
-    // TODO: add logging crate
-    println!("*** Contabile *** \nStarting up!");
+    env_logger::init();
+    debug!("Contabile starting up");
     let args: Vec<String> = env::args().collect();
 
     // TODO: add input validation and error handling
     let transactions_filepath = args.get(1).unwrap();
-    println!("{:?}", transactions_filepath);
+    debug!("{:?}", transactions_filepath);
 
     // Read csv input file
     let transactions: Vec<Transaction> =
         match get_csv_transactions_from_filepath(transactions_filepath) {
             Ok(transactions) => {
-                println!(
+                debug!(
                     "Success reading csv input file csv file, {:?} transactions",
                     transactions.len()
                 );
                 transactions
             }
             Err(err) => {
-                println!("Error reading csv input file: {:?}", err);
+                error!("Error reading csv input file: {:?}", err);
                 process::exit(1);
             }
         };
 
     let account_map = process_transactions(transactions);
 
-    // For debugging purposes
+    // Print output to std out in csv format
+    println!("{}", "client,available,held,total,locked");
     for item in account_map {
-        println!("{:?}", item.1);
+        println!("{}", item.1.to_csv());
     }
 }

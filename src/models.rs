@@ -50,4 +50,16 @@ impl Account {
     pub fn sum_total(&mut self) {
         self.total = self.available + self.held
     }
+
+    pub fn to_csv(&self) -> String {
+        return self.client_id.to_string()
+            + ","
+            + &self.available.to_string()
+            + ","
+            + &self.held.to_string()
+            + ","
+            + &self.total.to_string()
+            + ","
+            + &self.locked.to_string()
+    }
 }
