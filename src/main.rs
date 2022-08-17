@@ -123,9 +123,16 @@ fn main() {
                     acct.held += transaction.amount();
                 }
             }
+            TransactionType::Resolve => {
+                if let Some(transaction) = &transaction_history.get(&tx.id) {
+                    acct.available += transaction.amount();
+                    acct.held -= transaction.amount();
+                }
+            }
             _ => {}
         };
-        transaction_history.insert(tx.id, tx);
+
+        transaction_history.entry(tx.id).or_insert(tx);
         acct.sum_total();
     };
 
