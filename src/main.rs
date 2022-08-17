@@ -77,6 +77,11 @@ fn get_csv_transactions_from_filepath(path: &str) -> Result<Vec<Transaction>, Bo
 fn apply_transaction(account: &mut Account, transaction: Transaction) {
     match transaction.transaction_type {
         TransactionType::Deposit => account.available += transaction.amount,
+        TransactionType::Withdrawal => {
+            if account.available >= transaction.amount {
+                account.available -= transaction.amount
+            }
+        }
         _ => {}
     };
     account.total();
