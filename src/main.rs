@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::error::Error;
 use std::{env, process};
+use std::hash::Hash;
 
 use csv::{ReaderBuilder, Trim};
 use serde::Deserialize;
@@ -50,6 +51,7 @@ struct Account {
     available: f64,
     held: f64,
     total: f64,
+    locked: bool,
 }
 
 impl Account {
@@ -59,6 +61,7 @@ impl Account {
             available: 0f64,
             held: 0f64,
             total: 0f64,
+            locked: false,
         }
     }
 
@@ -107,14 +110,20 @@ fn main() {
 
     let mut account_map: HashMap<u16, Account> = HashMap::new();
     let mut transaction_history: HashMap<u32, Transaction> = HashMap::new();
+    let mut dispute_history: HashMap<u32, Transaction> = HashMap::new();
+
 
     let mut apply_transaction = |acct: &mut Account, tx: Transaction| {
         match tx.transaction_type {
-            TransactionType::Deposit => acct.available += tx.amount(),
+            TransactionType::Deposit => {
+                acct.available += tx.amount();
+                transaction_history.entry(tx.id).or_insert(tx);
+            }
             TransactionType::Withdrawal => {
                 if acct.available >= tx.amount() {
                     acct.available -= tx.amount()
                 }
+                transaction_history.entry(tx.id).or_insert(tx);
             }
             TransactionType::Dispute => {
                 if let Some(transaction) = &transaction_history.get(&tx.id) {
@@ -122,17 +131,29 @@ fn main() {
                     acct.available -= transaction.amount();
                     acct.held += transaction.amount();
                 }
+                dispute_history.entry(tx.id).or_insert(tx);
             }
             TransactionType::Resolve => {
                 if let Some(transaction) = &transaction_history.get(&tx.id) {
-                    acct.available += transaction.amount();
-                    acct.held -= transaction.amount();
+                    if dispute_history.contains_key(&tx.id) {
+                        acct.available += transaction.amount();
+                        acct.held -= transaction.amount();
+                        dispute_history.remove(&tx.id);
+                    }
                 }
             }
-            _ => {}
+            TransactionType::Chargeback => {
+                if let Some(transaction) = &transaction_history.get(&tx.id) {
+                    if dispute_history.contains_key(&tx.id) {
+                        acct.held -= transaction.amount();
+                        acct.locked = true;
+                        dispute_history.remove(&tx.id);
+                    }
+                }
+            }
         };
 
-        transaction_history.entry(tx.id).or_insert(tx);
+
         acct.sum_total();
     };
 
