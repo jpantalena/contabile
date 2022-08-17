@@ -12,8 +12,14 @@ struct Transaction {
     #[serde(rename = "client")]
     client_id: u16,
     #[serde(rename = "tx")]
-    transaction_id: u32,
-    amount: f64,
+    id: u32,
+    amount: Option<f64>,
+}
+
+impl Transaction {
+    fn amount(&self) -> f64 {
+        return self.amount.unwrap_or(0f64)
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -56,7 +62,7 @@ impl Account {
         }
     }
 
-    fn total(&mut self) {
+    fn sum_total(&mut self) {
         self.total = self.available + self.held
     }
 }
@@ -72,19 +78,6 @@ fn get_csv_transactions_from_filepath(path: &str) -> Result<Vec<Transaction>, Bo
         transactions.push(transaction);
     }
     Ok(transactions)
-}
-
-fn apply_transaction(account: &mut Account, transaction: Transaction) {
-    match transaction.transaction_type {
-        TransactionType::Deposit => account.available += transaction.amount,
-        TransactionType::Withdrawal => {
-            if account.available >= transaction.amount {
-                account.available -= transaction.amount
-            }
-        }
-        _ => {}
-    };
-    account.total();
 }
 
 fn main() {
@@ -113,6 +106,28 @@ fn main() {
         };
 
     let mut account_map: HashMap<u16, Account> = HashMap::new();
+    let mut transaction_history: HashMap<u32, Transaction> = HashMap::new();
+
+    let mut apply_transaction = |acct: &mut Account, tx: Transaction| {
+        match tx.transaction_type {
+            TransactionType::Deposit => acct.available += tx.amount(),
+            TransactionType::Withdrawal => {
+                if acct.available >= tx.amount() {
+                    acct.available -= tx.amount()
+                }
+            }
+            TransactionType::Dispute => {
+                if let Some(transaction) = &transaction_history.get(&tx.id) {
+                    // assume the transaction is a deposit
+                    acct.available -= transaction.amount();
+                    acct.held += transaction.amount();
+                }
+            }
+            _ => {}
+        };
+        transaction_history.insert(tx.id, tx);
+        acct.sum_total();
+    };
 
     // Iterate over transactions and apply to accounts
     for transaction in transactions {
