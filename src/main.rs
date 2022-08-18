@@ -1,7 +1,7 @@
 use std::error::Error;
 use std::{env, process};
 
-use csv::{ReaderBuilder, Trim, WriterBuilder};
+use csv::{ReaderBuilder, Trim};
 use models::{Account, Transaction, TransactionType};
 use processor::process_transactions;
 
@@ -27,22 +27,20 @@ fn get_csv_transactions_from_filepath(path: &str) -> Result<Vec<Transaction>, Bo
 fn main() {
     env_logger::init();
     debug!("Contabile starting up");
-    let args: Vec<String> = env::args().collect();
 
-    // TODO: add input validation and error handling
-    let transactions_filepath = args.get(1).unwrap();
-    debug!("{:?}", transactions_filepath);
+    let args: Vec<String> = env::args().collect();
+    let transactions_filepath = match args.get(1) {
+        Some(filepath) => filepath,
+        None => {
+            error!("Invalid input args. Try: cargo run -- transactions.csv");
+            process::exit(1);
+        }
+    };
 
     // Read csv input file
     let transactions: Vec<Transaction> =
         match get_csv_transactions_from_filepath(transactions_filepath) {
-            Ok(transactions) => {
-                debug!(
-                    "Success reading csv input file csv file, {:?} transactions",
-                    transactions.len()
-                );
-                transactions
-            }
+            Ok(transactions) => transactions,
             Err(err) => {
                 error!("Error reading csv input file: {:?}", err);
                 process::exit(1);
@@ -52,7 +50,7 @@ fn main() {
     let account_map = process_transactions(transactions);
 
     // Print output to std out in csv format
-    println!("{}", "client,available,held,total,locked");
+    println!("client,available,held,total,locked");
     for item in account_map {
         println!("{}", item.1.to_csv());
     }

@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use crate::{Account, Transaction, TransactionType};
+use std::collections::HashMap;
 
 pub fn process_transactions(transactions: Vec<Transaction>) -> HashMap<u16, Account> {
     let mut account_map: HashMap<u16, Account> = HashMap::new();
@@ -59,5 +59,5 @@ pub fn process_transactions(transactions: Vec<Transaction>) -> HashMap<u16, Acco
             account_map.insert(client_id, account);
         }
     }
-    return account_map;
+    account_map
 }

@@ -13,7 +13,7 @@ pub struct Transaction {
 
 impl Transaction {
     pub fn amount(&self) -> f64 {
-        return self.amount.unwrap_or(0f64);
+        self.amount.unwrap_or(0f64)
     }
 }
 
@@ -52,7 +52,7 @@ impl Account {
     }
 
     pub fn to_csv(&self) -> String {
-        return self.client_id.to_string()
+        self.client_id.to_string()
             + ","
             + &self.available.to_string()
             + ","
