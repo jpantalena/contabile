@@ -14,17 +14,23 @@ pub fn process_transactions(transactions: Vec<Transaction>) -> HashMap<u16, Acco
             }
             TransactionType::Withdrawal => {
                 if acct.available >= tx.amount() {
-                    acct.available -= tx.amount()
+                    acct.available -= tx.amount();
+                    transaction_history.entry(tx.id).or_insert(tx);
+                } else {
+                    debug!("Insufficient funds for withdrawal transaction {:?}", tx);
                 }
-                transaction_history.entry(tx.id).or_insert(tx);
             }
             TransactionType::Dispute => {
                 if let Some(transaction) = &transaction_history.get(&tx.id) {
                     // assume the transaction is a deposit
-                    acct.available -= transaction.amount();
-                    acct.held += transaction.amount();
+                    if transaction.client_id == tx.client_id {
+                        acct.available -= transaction.amount();
+                        acct.held += transaction.amount();
+                        dispute_history.entry(tx.id).or_insert(tx);
+                    } else {
+                        error!("Dispute transaction for wrong client {:?}", tx);
+                    }
                 }
-                dispute_history.entry(tx.id).or_insert(tx);
             }
             TransactionType::Resolve => {
                 if let Some(transaction) = &transaction_history.get(&tx.id) {
@@ -64,8 +70,8 @@ pub fn process_transactions(transactions: Vec<Transaction>) -> HashMap<u16, Acco
 
 #[cfg(test)]
 mod tests {
-    use crate::TransactionType::{Chargeback, Deposit, Dispute, Resolve, Withdrawal};
     use super::*;
+    use crate::TransactionType::{Chargeback, Deposit, Dispute, Resolve, Withdrawal};
 
     #[test]
     fn test_process_transactions_deposit_withdrawal() {
@@ -74,14 +80,14 @@ mod tests {
                 id: 1,
                 client_id: 1,
                 transaction_type: Deposit,
-                amount: Some(3.0123)
+                amount: Some(3.0123),
             },
             Transaction {
                 id: 2,
                 client_id: 1,
                 transaction_type: Withdrawal,
-                amount: Some(1.8761)
-            }
+                amount: Some(1.8761),
+            },
         ];
 
         let actual = process_transactions(transactions);
@@ -155,7 +161,7 @@ mod tests {
                 client_id: 1,
                 id: 2,
                 amount: None,
-            }
+            },
         ];
 
         let actual = process_transactions(transactions);
@@ -195,7 +201,7 @@ mod tests {
                 client_id: 1,
                 id: 2,
                 amount: None,
-            }
+            },
         ];
 
         let actual = process_transactions(transactions);

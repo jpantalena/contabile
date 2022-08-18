@@ -52,6 +52,6 @@ fn main() {
     // Print output to std out in csv format
     println!("client,available,held,total,locked");
     for item in account_map {
-        println!("{}", item.1.to_csv());
+        println!("{}", item.1);
     }
 }

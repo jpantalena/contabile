@@ -1,4 +1,5 @@
 use serde::Deserialize;
+use std::fmt;
 
 #[derive(Debug, Deserialize)]
 pub struct Transaction {
@@ -36,6 +37,16 @@ pub struct Account {
     pub locked: bool,
 }
 
+impl fmt::Display for Account {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{},{:.4},{:.4},{:.4},{}",
+            self.client_id, self.available, self.held, self.total, self.locked
+        )
+    }
+}
+
 impl Account {
     pub fn new(client_id: &u16) -> Account {
         Account {
@@ -49,17 +60,5 @@ impl Account {
 
     pub fn sum_total(&mut self) {
         self.total = self.available + self.held
-    }
-
-    pub fn to_csv(&self) -> String {
-        self.client_id.to_string()
-            + ","
-            + &self.available.to_string()
-            + ","
-            + &self.held.to_string()
-            + ","
-            + &self.total.to_string()
-            + ","
-            + &self.locked.to_string()
     }
 }
