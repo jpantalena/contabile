@@ -22,14 +22,9 @@ pub fn process_transactions(transactions: Vec<Transaction>) -> HashMap<u16, Acco
             }
             TransactionType::Dispute => {
                 if let Some(transaction) = &transaction_history.get(&tx.id) {
-                    // assume the transaction is a deposit
-                    if transaction.client_id == tx.client_id {
-                        acct.available -= transaction.amount();
-                        acct.held += transaction.amount();
-                        dispute_history.entry(tx.id).or_insert(tx);
-                    } else {
-                        error!("Dispute transaction for wrong client {:?}", tx);
-                    }
+                    acct.available -= transaction.amount();
+                    acct.held += transaction.amount();
+                    dispute_history.entry(tx.id).or_insert(tx);
                 }
             }
             TransactionType::Resolve => {

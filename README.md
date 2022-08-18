@@ -60,5 +60,9 @@ deposit, 2, 2, 6.0
 
 It can be assumed that the transaction occur chronologically in the file.
 
+## Assumptions
 
-
+* Each client only has 1 account
+* There are multiple clients
+* Disputes only reference deposit transactions
+* Disputes, resolves, and chargeback will reference a tx with a matching client id
