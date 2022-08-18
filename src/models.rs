@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use std::fmt;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Transaction {
     #[serde(rename = "type")]
     pub transaction_type: TransactionType,
@@ -18,7 +18,7 @@ impl Transaction {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "lowercase")]
 pub enum TransactionType {
     Deposit,
@@ -60,5 +60,15 @@ impl Account {
 
     pub fn sum_total(&mut self) {
         self.total = self.available + self.held
+    }
+}
+
+pub struct ProcessorError {
+    pub message: String,
+}
+
+impl ProcessorError {
+    pub fn new(message: String) -> ProcessorError {
+        ProcessorError { message }
     }
 }

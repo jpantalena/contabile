@@ -2,7 +2,7 @@ use std::error::Error;
 use std::{env, process};
 
 use csv::{ReaderBuilder, Trim};
-use models::{Account, Transaction, TransactionType};
+use models::{Account, ProcessorError, Transaction, TransactionType};
 use processor::process_transactions;
 
 mod models;
