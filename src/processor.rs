@@ -34,12 +34,12 @@ fn apply_transaction(
     match tx.transaction_type {
         TransactionType::Deposit => {
             acct.available += tx.amount();
-            tx_history.entry(tx.id).or_insert(tx.clone());
+            tx_history.entry(tx.id).or_insert_with(|| tx.clone());
         }
         TransactionType::Withdrawal => {
             if acct.available >= tx.amount() {
                 acct.available -= tx.amount();
-                tx_history.entry(tx.id).or_insert(tx.clone());
+                tx_history.entry(tx.id).or_insert_with(|| tx.clone());
             } else {
                 return Err(ProcessorError::new(
                     "Insufficient funds for withdrawal".into(),
@@ -50,7 +50,7 @@ fn apply_transaction(
             let historical_tx_amount = find_transaction_amount(&tx.id, tx_history)?;
             acct.available -= historical_tx_amount;
             acct.held += historical_tx_amount;
-            dispute_history.entry(tx.id).or_insert(tx.clone());
+            dispute_history.entry(tx.id).or_insert_with(|| tx.clone());
         }
         TransactionType::Resolve => {
             let historical_tx_amount = find_transaction_amount(&tx.id, tx_history)?;
@@ -243,5 +243,102 @@ mod tests {
         assert_eq!(account.available, 5.5);
         assert_eq!(account.held, 0f64);
         assert_eq!(account.total, 5.5);
+    }
+
+    #[test]
+    fn test_process_transactions_withdrawal_without_account() {
+        let transactions: Vec<Transaction> = vec![Transaction {
+            id: 1,
+            client_id: 1,
+            transaction_type: Withdrawal,
+            amount: Some(3.0000),
+        }];
+
+        let actual = process_transactions(transactions);
+        assert_eq!(actual.len(), 0);
+    }
+
+    #[test]
+    fn test_process_transactions_withdrawal_too_large() {
+        let transactions: Vec<Transaction> = vec![
+            Transaction {
+                id: 1,
+                client_id: 1,
+                transaction_type: Deposit,
+                amount: Some(5.0000),
+            },
+            Transaction {
+                id: 2,
+                client_id: 1,
+                transaction_type: Withdrawal,
+                amount: Some(7.0000),
+            },
+        ];
+
+        let actual = process_transactions(transactions);
+        assert_eq!(actual.len(), 1);
+
+        let account = actual.get(&1).unwrap();
+        assert_eq!(account.client_id, 1);
+        assert_eq!(account.locked, false);
+        assert_eq!(account.available, 5.0000);
+        assert_eq!(account.held, 0f64);
+        assert_eq!(account.total, 5.0000);
+    }
+
+    #[test]
+    fn test_process_transactions_dispute_transaction_not_found() {
+        let transactions: Vec<Transaction> = vec![
+            Transaction {
+                id: 1,
+                client_id: 1,
+                transaction_type: Deposit,
+                amount: Some(5.0000),
+            },
+            Transaction {
+                id: 2,
+                client_id: 1,
+                transaction_type: Dispute,
+                amount: None,
+            },
+        ];
+
+        let actual = process_transactions(transactions);
+        assert_eq!(actual.len(), 1);
+
+        let account = actual.get(&1).unwrap();
+        assert_eq!(account.client_id, 1);
+        assert_eq!(account.locked, false);
+        assert_eq!(account.available, 5.0000);
+        assert_eq!(account.held, 0f64);
+        assert_eq!(account.total, 5.0000);
+    }
+
+    #[test]
+    fn test_process_transactions_resolve_disputed_transaction_not_found() {
+        let transactions: Vec<Transaction> = vec![
+            Transaction {
+                id: 1,
+                client_id: 1,
+                transaction_type: Deposit,
+                amount: Some(5.0000),
+            },
+            Transaction {
+                id: 1,
+                client_id: 1,
+                transaction_type: Resolve,
+                amount: None,
+            },
+        ];
+
+        let actual = process_transactions(transactions);
+        assert_eq!(actual.len(), 1);
+
+        let account = actual.get(&1).unwrap();
+        assert_eq!(account.client_id, 1);
+        assert_eq!(account.locked, false);
+        assert_eq!(account.available, 5.0000);
+        assert_eq!(account.held, 0f64);
+        assert_eq!(account.total, 5.0000);
     }
 }

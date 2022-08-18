@@ -33,8 +33,14 @@ If the disputed transaction doesn't exist or the transaction isn't under dispute
 
 ## How to run
 
+Output to std out
 ```
 cargo run -- transactions.csv
+```
+
+Output to file
+```
+cargo run -- transactions.csv > accounts.csv
 ```
 
 ## How to run tests
