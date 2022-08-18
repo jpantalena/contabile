@@ -61,3 +61,151 @@ pub fn process_transactions(transactions: Vec<Transaction>) -> HashMap<u16, Acco
     }
     account_map
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::TransactionType::{Chargeback, Deposit, Dispute, Resolve, Withdrawal};
+    use super::*;
+
+    #[test]
+    fn test_process_transactions_deposit_withdrawal() {
+        let transactions: Vec<Transaction> = vec![
+            Transaction {
+                id: 1,
+                client_id: 1,
+                transaction_type: Deposit,
+                amount: Some(3.0123)
+            },
+            Transaction {
+                id: 2,
+                client_id: 1,
+                transaction_type: Withdrawal,
+                amount: Some(1.8761)
+            }
+        ];
+
+        let actual = process_transactions(transactions);
+        assert_eq!(actual.len(), 1);
+
+        let account = actual.get(&1).unwrap();
+        assert_eq!(account.client_id, 1);
+        assert_eq!(account.locked, false);
+        assert_eq!(account.available, 1.1362);
+        assert_eq!(account.held, 0f64);
+        assert_eq!(account.total, 1.1362);
+    }
+
+    #[test]
+    fn test_process_transactions_dispute() {
+        let transactions: Vec<Transaction> = vec![
+            Transaction {
+                transaction_type: Deposit,
+                client_id: 1,
+                id: 1,
+                amount: Some(5.5),
+            },
+            Transaction {
+                transaction_type: Deposit,
+                client_id: 1,
+                id: 2,
+                amount: Some(2.5),
+            },
+            Transaction {
+                transaction_type: Dispute,
+                client_id: 1,
+                id: 2,
+                amount: None,
+            },
+        ];
+
+        let actual = process_transactions(transactions);
+        assert_eq!(actual.len(), 1);
+
+        let account = actual.get(&1).unwrap();
+        assert_eq!(account.client_id, 1);
+        assert_eq!(account.locked, false);
+        assert_eq!(account.available, 5.5);
+        assert_eq!(account.held, 2.5);
+        assert_eq!(account.total, 8.0);
+    }
+
+    #[test]
+    fn test_process_transactions_dispute_resolve() {
+        let transactions: Vec<Transaction> = vec![
+            Transaction {
+                transaction_type: Deposit,
+                client_id: 1,
+                id: 1,
+                amount: Some(5.5),
+            },
+            Transaction {
+                transaction_type: Deposit,
+                client_id: 1,
+                id: 2,
+                amount: Some(2.5),
+            },
+            Transaction {
+                transaction_type: Dispute,
+                client_id: 1,
+                id: 2,
+                amount: None,
+            },
+            Transaction {
+                transaction_type: Resolve,
+                client_id: 1,
+                id: 2,
+                amount: None,
+            }
+        ];
+
+        let actual = process_transactions(transactions);
+        assert_eq!(actual.len(), 1);
+
+        let account = actual.get(&1).unwrap();
+        assert_eq!(account.client_id, 1);
+        assert_eq!(account.locked, false);
+        assert_eq!(account.available, 8.0);
+        assert_eq!(account.held, 0f64);
+        assert_eq!(account.total, 8.0);
+    }
+
+    #[test]
+    fn test_process_transactions_dispute_chargeback() {
+        let transactions: Vec<Transaction> = vec![
+            Transaction {
+                transaction_type: Deposit,
+                client_id: 1,
+                id: 1,
+                amount: Some(5.5),
+            },
+            Transaction {
+                transaction_type: Deposit,
+                client_id: 1,
+                id: 2,
+                amount: Some(2.5),
+            },
+            Transaction {
+                transaction_type: Dispute,
+                client_id: 1,
+                id: 2,
+                amount: None,
+            },
+            Transaction {
+                transaction_type: Chargeback,
+                client_id: 1,
+                id: 2,
+                amount: None,
+            }
+        ];
+
+        let actual = process_transactions(transactions);
+        assert_eq!(actual.len(), 1);
+
+        let account = actual.get(&1).unwrap();
+        assert_eq!(account.client_id, 1);
+        assert_eq!(account.locked, true);
+        assert_eq!(account.available, 5.5);
+        assert_eq!(account.held, 0f64);
+        assert_eq!(account.total, 5.5);
+    }
+}

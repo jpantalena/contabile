@@ -1,9 +1,17 @@
 # Contabile
 
+Contabile is a program written in Rust that processes transactions to determine account status and financials.
+
 ## How to run
 
 ```
 cargo run -- transactions.csv
+```
+
+## How to run tests
+
+```
+cargo test
 ```
 
 ## Input File
